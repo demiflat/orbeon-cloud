@@ -14,6 +14,11 @@
 #   makefile2graph (https://github.com/lindenb/makefile2graph)
 #   graphviz (https://graphviz.org/)
 ####################################################### 
+# notes:
+#   - dependencies are to the sentinel file
+#     to avoid doing extraneous work
+#   - tested on fedora linux 38
+####################################################### 
 SHELL := bash
 .ONESHELL:
 .SHELLFLAGS := -eu -o pipefail -c
@@ -37,6 +42,9 @@ PUSH_URL := $(ORBEON_REGISTRY_PUSH_URL)
 KIND_KUBE_CONFIG := $(CURDIR)/kube/.kind.kubeconfig
 KUBECONFIG = $(KIND_KUBE_CONFIG)
 KUBECTL = kubectl --kubeconfig=$(KUBECONFIG)
+KIND := $(shell which kind)
+# KIND := $(shell type -P kind)
+$(info using $(KIND))
 ####################################################### 
 # utilities
 ####################################################### 
@@ -70,7 +78,7 @@ printvars:
 # graph dependencies
 ####################################################### 
 .PHONY: diagram
-diagram: diagram/default.png diagram/build-container.png diagram/compile.png diagram/recompile.png diagram/publish.png diagram/tomcat.png diagram/kind-deploy.png
+diagram: diagram/default.png diagram/build-container.png diagram/compile.png diagram/recompile.png diagram/publish.png diagram/tomcat.png diagram/kind-deploy.png diagram/kind-prepare-cluster.png
 diagram/build-container.png:
 > make -Bnd build-container | make2graph | dot -Tpng -o diagram/build-container.png
 diagram/compile.png:
@@ -85,6 +93,8 @@ diagram/kind-deploy.png:
 > make -Bnd kind-deploy | make2graph | dot -Tpng -o diagram/kind-deploy.png
 diagram/default.png:
 > make -Bnd default | make2graph | dot -Tpng -o diagram/default.png
+diagram/kind-prepare-cluster.png:
+> make -Bnd kind-prepare-cluster | make2graph | dot -Tpng -o diagram/kind-prepare-cluster.png
 ####################################################### 
 # build targets
 ####################################################### 
@@ -316,14 +326,27 @@ simple-pod: package
 simple-pod-clean: 
 > podman kube down kube/tomcat-single-pod.yaml
 ####################################################### 
+# kind-single-node
+#   create kubernetes test cluster using kind
+#######################################################
+.PHONY: kind-single-node
+kind-single-node: kube/.kind.single.node.created
+kube/.kind.single.node.created:
+> KIND_EXPERIMENTAL_PROVIDER=podman systemd-run --scope --user --property=Delegate=yes kind create cluster --name orbeon-test --config kube/kind-simple.yaml
+#######################################################
+# if you don't want kind to clobber $HOME/kube/config then use this line instead:
+#> KIND_EXPERIMENTAL_PROVIDER=podman systemd-run --scope --user --property=Delegate=yes kind create cluster --name orbeon-test --config kube/kind-simple.yaml --kubeconfig $(KUBECONFIG)
+> @touch kube/.kind.single.node.created
+####################################################### 
 # kind-cluster
 #   create kubernetes test cluster using kind
 #######################################################
 .PHONY: kind-cluster
 kind-cluster: kube/.kind.cluster.created
 kube/.kind.cluster.created:
-> KIND_EXPERIMENTAL_PROVIDER=podman systemd-run --scope --user --property=Delegate=yes kind create cluster --name orbeon-test
-#> KIND_EXPERIMENTAL_PROVIDER=podman systemd-run --scope --user --property=Delegate=yes kind create cluster --name orbeon-test --config kube/kind-simple.yaml
+# > sudo KIND_EXPERIMENTAL_PROVIDER=podman systemd-run --scope --user --property=Delegate=yes $(KIND) create cluster --name orbeon-test-cluster --config kube/kind-cluster.yaml
+> sudo $(KIND) create cluster --name orbeon-test-cluster --config kube/kind-cluster.yaml -kubeconfig $(KUBECONFIG)
+> sudo chmod 666 $(KUBECONFIG)
 > @touch kube/.kind.cluster.created
 ####################################################### 
 # kind-kubeconfig
@@ -332,12 +355,35 @@ kube/.kind.cluster.created:
 #   kind also saves to .kube/config (clobbers existing)
 #######################################################
 .PHONY: kind-kubeconfig
-kind-kubeconfig: kube/.kind.kubeconfig kind-cluster
+kind-kubeconfig: kube/.kind.kubeconfig
 kube/.kind.kubeconfig:
-> kind get kubeconfig --name orbeon-test > kube/.kind.kubeconfig
-> $(info KIND_KUBE_CONFIG is $(KIND_KUBE_CONFIG))
+> $(KIND) get kubeconfig --name orbeon-test > kube/.kind.kubeconfig
+> @touch kube/.kind.kubeconfig
 > $(info KUBECONFIG is $(KUBECONFIG))
-> $(info KUBECONFIG $(origin KUBECONFIG))
+####################################################### 
+# kind-cluster-kubeconfig
+#   save kind kubeconfig to disk
+#   KUBECONFIG should point to this
+#   kind also saves to .kube/config (clobbers existing)
+#######################################################
+.PHONY: kind-cluster-kubeconfig
+kind-cluster-kubeconfig: kube/.kind.cluster.kubeconfig
+kube/.kind.cluster.kubeconfig: kube/.kind.cluster.created
+> sudo $(KIND) get kubeconfig --name orbeon-test-cluster > kube/.kind.cluster.kubeconfig
+> sudo $(KIND) get kubeconfig --name orbeon-test-cluster > kube/.kind.kubeconfig
+> $(info KUBECONFIG is $(KUBECONFIG))
+####################################################### 
+# kind-load-cluster-image
+#   copy local image into kind cluster
+#   this has an implicit dependency on package
+#   although it isn't necessary to rebuild the
+#   container everytime
+#######################################################
+.PHONY: kind-load-cluster-image
+kind-load-cluster-image: kube/.kind.load.cluster.image
+kube/.kind.load.cluster.image: kube/.kind.kubeconfig
+> kind load docker-image localhost/orbeon-tomcat:test --name orbeon-test --verbosity 99
+> @touch kube/.kind.load.cluster.image
 ####################################################### 
 # kind-load-image
 #   copy local image into kind cluster
@@ -347,62 +393,130 @@ kube/.kind.kubeconfig:
 #######################################################
 .PHONY: kind-load-image
 kind-load-image: kube/.kind.load.image
-kube/.kind.load.image:
-> kind load docker-image localhost/orbeon-tomcat:test --name orbeon-test -v 10
+kube/.kind.load.image: kube/.kind.kubeconfig
+> kind load docker-image localhost/orbeon-tomcat:test --name orbeon-test --verbosity 99
 > @touch kube/.kind.load.image
+####################################################### 
+# kind-reload-image
+#   copy local image into kind cluster
+#######################################################
+.PHONY: kind-reload-image
+kind-reload-image: kube/.kind.kubeconfig kind-delete-image-sentinel kube/.kind.load.image
+.PHONY: kind-delete-image-sentinel
+kind-delete-image-sentinel:
+> @rm kube/.kind.load.image
 ####################################################### 
 # kind-deploy
 #######################################################
 .PHONY: kind-deploy
 kind-deploy: kube/.kind.deploy.cluster
-kube/.kind.deploy.cluster: kube/.kind.cluster.created kube/.kind.kubeconfig kube/.kind.load.image
+kube/.kind.deploy.single.node: kube/.kind.single.node.created kube/.kind.kubeconfig kube/.kind.load.image
+> $(KUBECTL) create deployment orbeon-tomcat --image=localhost/orbeon-tomcat:test --port 8080
+> @touch kube/.kind.deploy.single.node
+####################################################### 
+# kind-deploy-cluster
+#######################################################
+.PHONY: kind-deploy-cluster
+kind-deploy-cluster: kube/.kind.deploy.cluster
+kube/.kind.deploy.cluster: kube/.kind.cluster.created kube/.kind.cluster.kubeconfig kube/.kind.load.cluster.image
 > $(KUBECTL) create deployment orbeon-tomcat --image=localhost/orbeon-tomcat:test --port 8080
 > @touch kube/.kind.deploy.cluster
+####################################################### 
+# kind-expose-nodeport
+#######################################################
+.PHONY: kind-expose-nodeport
+kind-expose-nodeport: kube/.kind.kubeconfig
+> $(KUBECTL) expose deployment/orbeon-tomcat --type="NodePort" --port 8080
 ####################################################### 
 # kind-port-forward
 #######################################################
 .PHONY: kind-port-forward
 POD=$(shell kubectl get pods|grep orbeon|awk '{print $$1}')
-kind-port-forward: kube/.kind.deploy.cluster kube/.kind.kubeconfig kube/.kind.load.image
+kind-port-forward: kube/.kind.deploy.single.node kube/.kind.kubeconfig kube/.kind.load.image kube/.kind.deploy.single.node kind-expose-nodeport
 > $(KUBECTL) port-forward $(POD) 8080:8080
 ####################################################### 
-# kind-expose
+# kind-deploy-metallb
 #######################################################
-.PHONY: kind-expose
-kind-expose: kind-deploy kind-kubeconfig kube-info
-> $(KUBECTL) expose deployment/orbeon-tomcat --type="NodePort" --port 8080
+.PHONY: kind-deploy-metallb
+kind-deploy-metallb: kube/.kind.kubeconfig kube/.kind-deploy-metallb
+kube/.kind-deploy-metallb:
+> $(KUBECTL) apply -f https://raw.githubusercontent.com/metallb/metallb/v0.13.9/config/manifests/metallb-native.yaml 
+> $(KUBECTL) wait --namespace metallb-system  --for=condition=ready pod --selector=app=metallb --timeout=90s
+> @touch kube/.kind-deploy-metallb
+####################################################### 
+# kind-create-ip-pool
+#######################################################
+.PHONY: kind-create-ip-pool
+kind-create-ip-pool: kube/.kind.kubeconfig
+> $(KUBECTL) apply -f kube/kind-metallb.yaml
+####################################################### 
+# kind-expose-loadbalancer
+#######################################################
+.PHONY: kind-expose-loadbalancer
+kind-expose-loadbalancer: kube/.kind.kubeconfig
+> $(KUBECTL) expose deployment/orbeon-tomcat --type="LoadBalancer" --port 8080
+#######################################################
+# kind-prepare-cluster 
+####################################################### 
+.PHONY: kind-prepare-cluster 
+kind-prepare-cluster: kube/.kind.cluster.created kube/.kind.load.cluster.image kube/.kind-deploy-metallb kind-create-ip-pool kube/.kind.deploy.cluster kube-info
+####################################################### 
+# kube-metallb-info
+####################################################### 
+.PHONY: kube-metallb-info
+kube-metallb-info:
+> kubectl get -A ipaddresspools.metallb.io -o wide
 ####################################################### 
 # kind-undeploy
 #######################################################
 .PHONY: kind-undeploy
-kind-undeploy: kind-kubeconfig
+kind-undeploy: kube/.kind.kubeconfig
 > $(KUBECTL) delete deployment orbeon-tomcat
+####################################################### 
+# kube-cluster-info
+#######################################################
+.PHONY: kube-cluster-info
+kube-cluster-info: kube/.kind.kubeconfig 
+> $(KUBECTL) cluster-info
 ####################################################### 
 # kube-pods
 #######################################################
 .PHONY: kube-pods
-kube-pods: kind-kubeconfig 
+kube-pods: kube/.kind.kubeconfig 
 > $(KUBECTL) get pods
 ####################################################### 
 # kube-logs
 #######################################################
 .PHONY: kube-logs
-kube-logs: kind-kubeconfig
+kube-logs: kube/.kind.kubeconfig
 > $(KUBECTL) logs -f deployment/orbeon-tomcat
 ####################################################### 
 # kube-info
 #######################################################
 .PHONY: kube-info
-kube-info: kind-kubeconfig
-> $(KUBECTL) get all
+kube-info: kube/.kind.kubeconfig
+> $(KUBECTL) get --all-namespaces all
 ####################################################### 
 # kind-delete
 #######################################################
 .PHONY: kind-delete
 kind-delete:
 > kind delete cluster --name orbeon-test
-> @rm -f kube/.kind.cluster.created
+> @rm -f kube/.kind.single.node.created
+> @rm -f kube/.kind.load.image
+> @rm -f kube/.kind.deploy.single.node
 > @rm -f kube/.kind.kubeconfig
+####################################################### 
+# kind-cluster-delete
+#######################################################
+.PHONY: kind-cluster-delete
+kind-cluster-delete:
+> sudo $(KIND) delete cluster --name orbeon-test-cluster
+> @rm -f kube/.kind.cluster.created
+> @rm -f kube/.kind.load.image
+> @rm -f kube/.kind.deploy.cluster
+> @rm -f kube/.kind.kubeconfig
+> @rm -f kube/.kind.cluster.kubeconfig
 ####################################################### 
 # kind-clean
 #######################################################
@@ -424,7 +538,11 @@ clean: clean-images staging-clean kind-clean
 > @rm -f build/.build-container.ubuntu.jdk17
 > @rm -f build/.build-container
 > @rm -f build/.build-container.all
+> @rm -f kube/.kind.single.node.created
 > @rm -f kube/.kind.cluster.created
+> @rm -f kube/.kind.load.image
+> @rm -f kube/.kind.deploy.single.node
+> @rm -f kube/.kind.deploy.cluster
 > @rm -f kube/.kind.kubeconfig
 ####################################################### 
 # clean-images from local image cache
@@ -436,3 +554,17 @@ clean-images:
 > @podman rmi -i localhost/orbeon-build-rocky
 > @podman rmi -i localhost/orbeon-build-ubuntu
 > @podman rmi -i localhost/orbeon-build
+####################################################### 
+# git-clean everything
+#######################################################
+.PHONY: git-clean
+git-clean:
+> git clean -xdf
+#######################################################
+# gitignore-update
+#######################################################
+.PHONY: gitignore-update
+gitignore-update:
+> @rm -f .gitignore;
+> @grep touch Makefile|awk '{print $$3}'|grep -v touch > .gitignore
+> @echo "package/staging/" >> .gitignore
