@@ -19,7 +19,7 @@ endif
 ####################################################### 
 
 .PHONY: build
-build: build/.build-container compile
+build: build/.build-container compile package
 #build-all: build/.build-container.almalinux build/.build-container.fedora build/.build-container.rocky build/.build-container.ubuntu
 
 build/.build-container.almalinux:
@@ -46,6 +46,17 @@ GH_TOKEN=$(GITHUB_TOKEN)
 .PHONY: compile
 compile:
 > podman run -it --rm --volume ./orbeon-forms:/orbeon:z -eGITHUB_TOKEN=$(GH_TOKEN) orbeon-build
+
+.PHONY: package
+package: orbeon.war
+> buildah build -f package/CONTAINERFILE.tomcat -t orbeon-tomcat
+
+orbeon.war:
+> mv orbeon-forms/build/distrib/orbeon-2022.1.1-SNAPSHOT.*-CE.war orbeon.war
+
+.PHONY: push-image
+push-image: package
+> podman push orbeon
 
 .PHONY: clean
 clean: clean-images
