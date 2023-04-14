@@ -20,12 +20,7 @@ endif
 
 .PHONY: build
 build: build/.build-container compile
-#build: build/.build-container.almalinux build/.build-container.fedora build/.build-container.rocky build/.build-container.ubuntu
-#fedora is the smallest:
-#localhost/orbeon-build-fedora               latest         d209a94e1347   49 seconds ago   1.36 GB
-#localhost/orbeon-build-ubuntu               latest         96216a82b5f9   8 minutes ago    2.21 GB
-#localhost/orbeon-build-rocky                latest         6f4b7ad3b6fa   10 minutes ago   1.49 GB
-#localhost/orbeon-build-almalinux            latest         7d2d13973669   11 minutes ago   1.91 GB
+#build-all: build/.build-container.almalinux build/.build-container.fedora build/.build-container.rocky build/.build-container.ubuntu
 
 build/.build-container.almalinux:
 > buildah build -f build/CONTAINERFILE.almalinux -t orbeon-build-almalinux
