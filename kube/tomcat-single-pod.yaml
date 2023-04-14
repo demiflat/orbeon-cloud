@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    org.opencontainers.image.base.name/orbeon-tomcat-simple: docker.io/library/tomcat:9-jdk11-corretto
+  labels:
+    app: orbeon-tomcat-simple-pod
+  name: orbeon-tomcat-simple-pod
+spec:
+  containers:
+  - image: localhost/orbeon-tomcat:latest
+    name: orbeon-tomcat-simple
+    ports:
+    - containerPort: 8080
+      hostPort: 8080
+    stdin: true
+    tty: true
+    resources:
+      limits:
+        cpu: 1
+        memory: 4G

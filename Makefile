@@ -61,6 +61,7 @@ print-targets: banner
 > $(info $(WHITE)     package: $(BLUE)make deployment container for tomcat$(RESET))
 > $(info $(WHITE)     package-inspect: $(BLUE)inspect tomcat deployment container contents$(RESET))
 > $(info $(WHITE)     start-tomcat: $(BLUE)start tomcat container$(RESET))
+> $(info $(WHITE)     simple-pod: $(BLUE)start tomcat container as a pod$(RESET))
 > $(info $(WHITE)     push-image: $(BLUE)push container image to "$$ORBEON_REGISTRY_PUSH_URL"$(RESET))
 > $(info $(WHITE)     clean: $(BLUE)clean everything$(RESET))
 > $(info $(WHITE)     staging-clean: $(BLUE)clean staging area$(RESET))
@@ -133,6 +134,10 @@ staging-clean:
 .PHONY: push-image
 push-image: package
 > podman push orbeon-tomcat $(PUSH_URL)
+
+.PHONY: simple-pod
+simple-pod:
+> podman kube play kube/tomcat-single-pod.yaml
 
 .PHONY: clean
 clean: clean-images
