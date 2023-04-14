@@ -51,19 +51,26 @@ compile:
 package: orbeon.war
 > buildah build -f package/CONTAINERFILE.tomcat -t orbeon-tomcat
 
-orbeon.war:
-> mv orbeon-forms/build/distrib/orbeon-2022.1.1-SNAPSHOT.*-CE.war orbeon.war
+.PHONY staging
+staging: packaging/staging/orbeon
+
+packaging/staging/orbeon:
+> mv orbeon-forms/build/distrib/orbeon-20*-CE.zip staging/orbeon
 
 .PHONY: push-image
 push-image: package
 > podman push orbeon
 
 .PHONY: clean
-clean: clean-images
+clean: clean-images clean-war
 > @rm -f build/.build-container.almalinux
 > @rm -f build/.build-container.fedora
 > @rm -f build/.build-container.rocky
 > @rm -f build/.build-container.ubuntu
+
+.PHONY: clean-war
+clean-war:
+> @rm -f orbeon.war
 
 .PHONY: clean-images
 clean-images:

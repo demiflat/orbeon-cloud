@@ -1,6 +1,6 @@
 <Context
     path="/orbeon"
-    docBase="/usr/local/tomcat/webapps/orbeon-forms/orbeon-war/target/webapp"
+    docBase="/usr/local/tomcat/webapps/orbeon"
     reloadable="false"
     override="true"
     crossContext="true"
@@ -13,7 +13,7 @@
     <Parameter
         override="false"
         name="oxf.resources.priority.0.oxf.resources.filesystem.sandbox-directory"
-        value="/path/to/orbeon-forms/form-runner/jvm/src/main/resources"/>
+        value="/usr/local/tomcat/webapps/orbeon/form-runner/jvm/src/main/resources"/>
     
     <Parameter
         override="false"
@@ -22,7 +22,7 @@
     <Parameter
         override="false"
         name="oxf.resources.priority.1.oxf.resources.filesystem.sandbox-directory"
-        value="/path/to/orbeon-forms/form-builder/jvm/src/main/resources"/>
+        value="/usr/local/tomcat/webapps/orbeon/form-builder/jvm/src/main/resources"/>
     
     <Parameter
         override="false"
@@ -31,7 +31,7 @@
     <Parameter
         override="false"
         name="oxf.resources.priority.2.oxf.resources.filesystem.sandbox-directory"
-        value="/path/to/orbeon-forms/resources-local"/>
+        value="/usr/local/tomcat/webapps/orbeon/resources-local"/>
     
     <Parameter
         override="false"
