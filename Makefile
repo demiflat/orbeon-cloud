@@ -25,6 +25,47 @@ GH_TOKEN=$(GITHUB_TOKEN)
 PUSH_URL := $(ORBEON_REGISTRY_PUSH_URL)
 ####################################################### 
 
+.PHONY: default
+default: print-targets
+
+# define standard colors
+ifneq (,$(findstring xterm,${TERM}))
+	BLACK        := $(shell tput -Txterm setaf 0)
+	RED          := $(shell tput -Txterm setaf 1)
+	GREEN        := $(shell tput -Txterm setaf 2)
+	YELLOW       := $(shell tput -Txterm setaf 3)
+	LIGHTPURPLE  := $(shell tput -Txterm setaf 4)
+	PURPLE       := $(shell tput -Txterm setaf 5)
+	BLUE         := $(shell tput -Txterm setaf 6)
+	WHITE        := $(shell tput -Txterm setaf 7)
+	RESET := $(shell tput -Txterm sgr0)
+else
+	BLACK        := ""
+	RED          := ""
+	GREEN        := ""
+	YELLOW       := ""
+	LIGHTPURPLE  := ""
+	PURPLE       := ""
+	BLUE         := ""
+	WHITE        := ""
+	RESET        := ""
+endif
+
+.PHONY: print-targets
+print-targets:
+> $(info $(YELLOW)orbean-build $(GREEN)make targets:$(RESET))
+> $(info $(WHITE)     build: $(BLUE)make build container$(RESET))
+> $(info $(WHITE)     build-container-inspect: $(BLUE)inspect build container contents$(RESET))
+> $(info $(WHITE)     compile: $(BLUE)compile orbeon using build container$(RESET))
+> $(info $(WHITE)     staging: $(BLUE)prepare contents for deployment container in $(LIGHTPURPLE)package/staging/orbeon-exploded$(RESET))
+> $(info $(WHITE)     package: $(BLUE)make deployment container for tomcat$(RESET))
+> $(info $(WHITE)     package-inspect: $(BLUE)inspect tomcat deployment container contents$(RESET))
+> $(info $(WHITE)     start-tomcat: $(BLUE)start tomcat container$(RESET))
+> $(info $(WHITE)     push-image: $(BLUE)push container image to "$$ORBEON_REGISTRY_PUSH_URL"$(RESET))
+> $(info $(WHITE)     clean: $(BLUE)clean everything$(RESET))
+> $(info $(WHITE)     staging-clean: $(BLUE)clean staging area$(RESET))
+> $(info $(WHITE)     clean-images: $(BLUE)clean local images$(RESET))
+
 .PHONY: build
 build: build/.build-container compile package
 #build-all: build/.build-container.almalinux build/.build-container.fedora build/.build-container.rocky build/.build-container.ubuntu
@@ -48,6 +89,10 @@ build/.build-container.ubuntu:
 # canonical build container
 build/.build-container: build/.build-container.ubuntu
 > podman tag orbeon-build-ubuntu orbeon-build
+
+.PHONY: build-container-inspect
+build-container-inspect: package
+> podman run -it --rm --entrypoint /bin/bash orbeon-build 
 
 .PHONY: compile
 compile:
@@ -93,7 +138,7 @@ clean: clean-images
 > @rm -f build/.build-container.rocky
 > @rm -f build/.build-container.ubuntu
 
-.PHONY: images-clean
+.PHONY: clean-images
 clean-images:
 > @podman rmi -i localhost/orbeon-build-almalinux
 > @podman rmi -i localhost/orbeon-build-fedora
