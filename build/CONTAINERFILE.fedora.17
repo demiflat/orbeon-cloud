@@ -1,0 +1,9 @@
+FROM fedora:38
+
+RUN curl -L https://www.scala-sbt.org/sbt-rpm.repo > /etc/yum.repos.d/sbt-rpm.repo
+RUN dnf install -y java-17-openjdk scala sbt ant git npm gcc-c++ cairo-devel pango-devel libjpeg-turbo-devel giflib-devel
+RUN mkdir /orbeon
+COPY compile/build.sh /
+VOLUME ["/orbeon"]
+WORKDIR /orbeon
+CMD ["/bin/bash", "/build.sh"]
