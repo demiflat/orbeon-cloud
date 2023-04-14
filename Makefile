@@ -52,7 +52,7 @@ else
 endif
 
 .PHONY: print-targets
-print-targets:
+print-targets: banner
 > $(info $(YELLOW)orbean-build $(GREEN)make targets:$(RESET))
 > $(info $(WHITE)     build: $(BLUE)make build container$(RESET))
 > $(info $(WHITE)     build-container-inspect: $(BLUE)inspect build container contents$(RESET))
@@ -65,6 +65,9 @@ print-targets:
 > $(info $(WHITE)     clean: $(BLUE)clean everything$(RESET))
 > $(info $(WHITE)     staging-clean: $(BLUE)clean staging area$(RESET))
 > $(info $(WHITE)     clean-images: $(BLUE)clean local images$(RESET))
+
+banner:
+> @cat .banner
 
 .PHONY: build
 build: build/.build-container compile package
