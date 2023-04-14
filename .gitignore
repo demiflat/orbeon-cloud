@@ -1,6 +1,16 @@
+package/staging/
 build/.build-container.almalinux
 build/.build-container.fedora
 build/.build-container.rocky
 build/.build-container.ubuntu
-package/staging/
+build/.build-container.almalinux.jdk17
+build/.build-container.fedora.jdk17
+build/.build-container.rocky.jdk17
+build/.build-container.ubuntu.jdk17
+build/.build-container
+build/.build-container.all
+kube/.kind.cluster.created
 kube/.kind.kubeconfig
+kube/.kind.deploy.cluster
+kube/.kind.load.image
+

@@ -40,7 +40,7 @@ KUBECTL = kubectl --kubeconfig=$(KUBECONFIG)
 ####################################################### 
 # utilities
 ####################################################### 
-include gmsl/gmsl
+#include gmsl/gmsl
 ####################################################### 
 # define standard colors
 ####################################################### 
@@ -70,13 +70,21 @@ printvars:
 # graph dependencies
 ####################################################### 
 .PHONY: diagram
-diagram: diagram/build-container.png diagram/publish.png diagram/kind-deploy.png
+diagram: diagram/default.png diagram/build-container.png diagram/compile.png diagram/recompile.png diagram/publish.png diagram/tomcat.png diagram/kind-deploy.png
 diagram/build-container.png:
 > make -Bnd build-container | make2graph | dot -Tpng -o diagram/build-container.png
+diagram/compile.png:
+> make -Bnd compile | make2graph | dot -Tpng -o diagram/compile.png
+diagram/recompile.png:
+> make -Bnd recompile | make2graph | dot -Tpng -o diagram/recompile.png
+diagram/tomcat.png:
+> make -Bnd tomcat | make2graph | dot -Tpng -o diagram/tomcat.png
 diagram/publish.png:
 > make -Bnd publish | make2graph | dot -Tpng -o diagram/publish.png
 diagram/kind-deploy.png:
 > make -Bnd kind-deploy | make2graph | dot -Tpng -o diagram/kind-deploy.png
+diagram/default.png:
+> make -Bnd default | make2graph | dot -Tpng -o diagram/default.png
 ####################################################### 
 # build targets
 ####################################################### 
@@ -104,15 +112,16 @@ print-targets: banner
 > $(info $(WHITE)     build-container: $(BLUE)make build container$(RESET))
 > $(info $(WHITE)     build-container-inspect: $(BLUE)inspect build container contents$(RESET))
 > $(info $(WHITE)     compile: $(BLUE)compile orbeon using build container$(RESET))
+> $(info $(WHITE)     recompile: $(BLUE)recompile orbeon during iterative development$(RESET))
 > $(info $(WHITE)     staging: $(BLUE)prepare contents for deployment container in $(LIGHTPURPLE)package/staging/orbeon-exploded$(RESET))
+> $(info $(WHITE)     staging-clean: $(BLUE)clean staging area$(RESET))
 > $(info $(WHITE)     package: $(BLUE)make deployment container for tomcat$(RESET))
 > $(info $(WHITE)     package-inspect: $(BLUE)inspect tomcat deployment container contents$(RESET))
-> $(info $(WHITE)     start-tomcat: $(BLUE)start tomcat container; CTRL-C to quit$(RESET))
+> $(info $(WHITE)     tomcat: $(BLUE)start tomcat container; CTRL-C to quit$(RESET))
 > $(info $(WHITE)     simple-pod: $(BLUE)start tomcat container as a pod$(RESET))
 > $(info $(WHITE)     simple-pod-clean: $(BLUE)teardown simple tomcat pod$(RESET))
 > $(info $(WHITE)     publish: $(BLUE)publish container image to "$$ORBEON_REGISTRY_PUSH_URL"$(RESET))
 > $(info $(WHITE)     clean: $(BLUE)clean everything$(RESET))
-> $(info $(WHITE)     staging-clean: $(BLUE)clean staging area$(RESET))
 > $(info $(WHITE)     clean-images: $(BLUE)clean local images$(RESET))
 ####################################################### 
 # banner
@@ -129,77 +138,103 @@ build-container: build/.build-container
 # build all build-containers
 #######################################################
 .PHONY: build-container-all
-build-container-all: build/.build-container.almalinux build/.build-container.almalinux.jdk17 build/.build-container.fedora build/.build-container.fedora.jdk17 build/.build-container.rocky build/.build-container.rocky.jdk17 build/.build-container.ubuntu build/.build-container.ubuntu.jdk17
+build-container-all: build/.build-container-all
+build/.build-container-all: build/.build-container.almalinux build/.build-container.almalinux.jdk17 build/.build-container.fedora build/.build-container.fedora.jdk17 build/.build-container.rocky build/.build-container.rocky.jdk17 build/.build-container.ubuntu build/.build-container.ubuntu.jdk17
 ####################################################### 
 # build almalinux build-container
 #######################################################
+.PHONY: build-container-almalinux
+build-container-almalinux: build/.build-container.almalinux
 build/.build-container.almalinux:
 > podman build -f build/CONTAINERFILE.almalinux -t orbeon-build-almalinux
 > @touch build/.build-container.almalinux
 ####################################################### 
 # build almalinux jdk17 build-container
 #######################################################
+.PHONY: build-container-almalinux-jdk17
+build-container-almalinux-jdk17: build/.build-container.almalinux.jdk17
 build/.build-container.almalinux.jdk17:
-> podman build -f build/CONTAINERFILE.almalinux.jdk17 -t orbeon-build-almalinux.jdk17
+> podman build -f build/CONTAINERFILE.almalinux.jdk17 -t orbeon-build-almalinux-jdk17
 > @touch build/.build-container.almalinux.jdk17
 ####################################################### 
 # build fedora build-container
 #######################################################
+.PHONY: build-container.fedora
+build-container-fedora: build/.build-container.fedora
 build/.build-container.fedora:
 > podman build -f build/CONTAINERFILE.fedora -t orbeon-build-fedora
 > @touch build/.build-container.fedora
 ####################################################### 
 # build fedora jdk17 build-container
 #######################################################
+.PHONY: build-container.fedora-jdk17
+build-container.fedora-jdk17: build/.build-container.fedora.jdk17
 build/.build-container.fedora.jdk17:
-> podman build -f build/CONTAINERFILE.fedora.jdk17 -t orbeon-build-fedora.jdk17
+> podman build -f build/CONTAINERFILE.fedora.jdk17 -t orbeon-build-fedora-jdk17
 > @touch build/.build-container.fedora.jdk17
 ####################################################### 
 # build rocky build-container
 #######################################################
+.PHONY: build-container-rocky
+build-container-rocky: build/.build-container.rocky
 build/.build-container.rocky:
 > podman build -f build/CONTAINERFILE.rocky -t orbeon-build-rocky
 > @touch build/.build-container.rocky
 ####################################################### 
 # build rocky jdk17 build-container
 #######################################################
+.PHONY: build-container.rocky.jdk17
+build-container-rocky-jdk17: build/.build-container.rocky.jdk17
 build/.build-container.rocky.jdk17:
-> podman build -f build/CONTAINERFILE.rocky.jdk17 -t orbeon-build-rocky.jdk17
+> podman build -f build/CONTAINERFILE.rocky.jdk17 -t orbeon-build-rocky-jdk17
 > @touch build/.build-container.rocky.jdk17
 ####################################################### 
 # build ubuntu build-container
 #######################################################
+.PHONY: build-container-ubuntu
+build-container-ubuntu: build/.build-container.ubuntu
 build/.build-container.ubuntu:
 > podman build -f build/CONTAINERFILE.ubuntu -t orbeon-build-ubuntu
 > @touch build/.build-container.ubuntu
 ####################################################### 
 # build ubuntu jdk17 build-container
 #######################################################
+.PHONY: build-container-ubuntu-jdk17
+build-container-ubuntu-jdk17: build/.build-container.ubuntu.jdk17
 build/.build-container.ubuntu.jdk17:
-> podman build -f build/CONTAINERFILE.ubuntu.jdk17 -t orbeon-build-ubuntu.jdk17
+> podman build -f build/CONTAINERFILE.ubuntu.jdk17 -t orbeon-build-ubuntu-jdk17
 > @touch build/.build-container.ubuntu.jdk17
 ####################################################### 
 # tag build-container
 #   choose canonical build container
 #######################################################
-build/.build-container: build/.build-container.ubuntu
+.PHONY: build-container
+build-container: build/.build-container
+build/.build-container: build-container-ubuntu
 > podman tag orbeon-build-ubuntu orbeon-build
+> @touch build/.build-container
 ####################################################### 
 # build-container-inspect
 #   inspect the build environment used for compilation
 #######################################################
 .PHONY: build-container-inspect
-build-container-inspect: package
+build-container-inspect: build-container package 
 > podman run -it --rm --entrypoint /bin/bash orbeon-build 
 ####################################################### 
 # compile
-#   implicit dependency on build-container
-#     but we don't want to unnecessarily rebuild
-#     the build-container everytime we want to compile
 #######################################################
 .PHONY: compile
-compile:
+compile: build-container package/staging/.compile.complete
+package/staging/.compile.complete:
 > podman run -it --rm --volume ./orbeon-forms:/orbeon:z -eGITHUB_TOKEN=$(GH_TOKEN) orbeon-build
+> @touch package/staging/.compile.complete
+####################################################### 
+# recompile
+#######################################################
+.PHONY: recompile
+recompile: remove-compile-sentinel compile
+remove-compile-sentinel:
+> @rm package/staging/.compile.complete
 ####################################################### 
 # package
 #   build the deployment orbean container
@@ -224,11 +259,11 @@ build-deploy-container:
 package-inspect: package
 > podman run -it --rm --entrypoint /bin/bash orbeon-tomcat 
 ####################################################### 
-# start-tomcat
+# tomcat
 #   start the container as part of development
 #######################################################
-.PHONY: start-tomcat
-start-tomcat: package
+.PHONY: tomcat
+tomcat: package
 > podman run -it --rm -p 8080:8080 orbeon-tomcat
 ####################################################### 
 # staging
@@ -247,11 +282,8 @@ package/staging/orbeon-exploded: package/staging/orbeon
 ####################################################### 
 # package/staging/orbeon:
 #   unzip build
-#   this has an implicit dependency on compile
-#   although we don't need to recompile unless there
-#   has been a change
 #######################################################
-package/staging/orbeon:
+package/staging/orbeon: compile
 > unzip orbeon-forms/build/distrib/orbeon-2*-CE.zip -d package/staging
 > cd package/staging && ln -s orbeon-* orbeon
 ####################################################### 
@@ -264,6 +296,7 @@ staging-clean:
 ####################################################### 
 # publish
 #   publish deployment image to remote repository
+#   uses default credentials
 #######################################################
 .PHONY: publish
 publish: package
@@ -287,14 +320,19 @@ simple-pod-clean:
 #   create kubernetes test cluster using kind
 #######################################################
 .PHONY: kind-cluster
-kind-cluster:
+kind-cluster: kube/.kind.cluster.created
+kube/.kind.cluster.created:
 > KIND_EXPERIMENTAL_PROVIDER=podman systemd-run --scope --user --property=Delegate=yes kind create cluster --name orbeon-test
+#> KIND_EXPERIMENTAL_PROVIDER=podman systemd-run --scope --user --property=Delegate=yes kind create cluster --name orbeon-test --config kube/kind-simple.yaml
+> @touch kube/.kind.cluster.created
 ####################################################### 
-# kube/.kind.kubeconfig
+# kind-kubeconfig
 #   save kind kubeconfig to disk
 #   KUBECONFIG should point to this
 #   kind also saves to .kube/config (clobbers existing)
 #######################################################
+.PHONY: kind-kubeconfig
+kind-kubeconfig: kube/.kind.kubeconfig kind-cluster
 kube/.kind.kubeconfig:
 > kind get kubeconfig --name orbeon-test > kube/.kind.kubeconfig
 > $(info KIND_KUBE_CONFIG is $(KIND_KUBE_CONFIG))
@@ -308,38 +346,63 @@ kube/.kind.kubeconfig:
 #   container everytime
 #######################################################
 .PHONY: kind-load-image
-kind-load-image:
+kind-load-image: kube/.kind.load.image
+kube/.kind.load.image:
 > kind load docker-image localhost/orbeon-tomcat:test --name orbeon-test -v 10
+> @touch kube/.kind.load.image
 ####################################################### 
 # kind-deploy
 #######################################################
 .PHONY: kind-deploy
-kind-deploy: kind-load-image
-> $(KUBECTL) create deployment orbeon-tomcat --image=localhost/orbeon-tomcat:test
+kind-deploy: kube/.kind.deploy.cluster
+kube/.kind.deploy.cluster: kube/.kind.cluster.created kube/.kind.kubeconfig kube/.kind.load.image
+> $(KUBECTL) create deployment orbeon-tomcat --image=localhost/orbeon-tomcat:test --port 8080
+> @touch kube/.kind.deploy.cluster
+####################################################### 
+# kind-port-forward
+#######################################################
+.PHONY: kind-port-forward
+POD=$(shell kubectl get pods|grep orbeon|awk '{print $$1}')
+kind-port-forward: kube/.kind.deploy.cluster kube/.kind.kubeconfig kube/.kind.load.image
+> $(KUBECTL) port-forward $(POD) 8080:8080
+####################################################### 
+# kind-expose
+#######################################################
+.PHONY: kind-expose
+kind-expose: kind-deploy kind-kubeconfig kube-info
+> $(KUBECTL) expose deployment/orbeon-tomcat --type="NodePort" --port 8080
 ####################################################### 
 # kind-undeploy
 #######################################################
 .PHONY: kind-undeploy
-kind-undeploy: 
+kind-undeploy: kind-kubeconfig
 > $(KUBECTL) delete deployment orbeon-tomcat
 ####################################################### 
 # kube-pods
 #######################################################
 .PHONY: kube-pods
-kube-pods: 
+kube-pods: kind-kubeconfig 
 > $(KUBECTL) get pods
 ####################################################### 
 # kube-logs
 #######################################################
 .PHONY: kube-logs
-kube-logs: 
+kube-logs: kind-kubeconfig
 > $(KUBECTL) logs -f deployment/orbeon-tomcat
+####################################################### 
+# kube-info
+#######################################################
+.PHONY: kube-info
+kube-info: kind-kubeconfig
+> $(KUBECTL) get all
 ####################################################### 
 # kind-delete
 #######################################################
 .PHONY: kind-delete
 kind-delete:
 > kind delete cluster --name orbeon-test
+> @rm -f kube/.kind.cluster.created
+> @rm -f kube/.kind.kubeconfig
 ####################################################### 
 # kind-clean
 #######################################################
@@ -355,7 +418,14 @@ clean: clean-images staging-clean kind-clean
 > @rm -f build/.build-container.fedora
 > @rm -f build/.build-container.rocky
 > @rm -f build/.build-container.ubuntu
-> @rm -f build/.build-container.ubuntu
+> @rm -f build/.build-container.almalinux.jdk17
+> @rm -f build/.build-container.fedora.jdk17
+> @rm -f build/.build-container.rocky.jdk17
+> @rm -f build/.build-container.ubuntu.jdk17
+> @rm -f build/.build-container
+> @rm -f build/.build-container.all
+> @rm -f kube/.kind.cluster.created
+> @rm -f kube/.kind.kubeconfig
 ####################################################### 
 # clean-images from local image cache
 #######################################################
