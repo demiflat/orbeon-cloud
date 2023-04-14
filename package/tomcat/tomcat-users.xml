@@ -1,0 +1,10 @@
+<tomcat-users>
+    <user
+        username="orbeon-user"
+        password="Secret, change me!"
+        roles="orbeon-user"/>
+    <user
+        username="orbeon-admin"
+        password="Secret, change me!"
+        roles="orbeon-user,orbeon-admin"/>
+</tomcat-users>

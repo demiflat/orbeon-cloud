@@ -2,6 +2,7 @@ FROM tomcat:9-jdk11-corretto
 
 COPY staging/orbeon-exploded /usr/local/tomcat/webapps/orbeon
 COPY tomcat/server.xml /usr/local/tomcat/conf/
+COPY tomcat/tomcat-users.xml /usr/local/tomcat/conf/
 EXPOSE 8080/tcp
 EXPOSE 8080/udp
 EXPOSE 8443/tcp

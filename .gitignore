@@ -1,7 +1,6 @@
-*.class
-*.log
 build/.build-container.almalinux
 build/.build-container.fedora
 build/.build-container.rocky
 build/.build-container.ubuntu
 package/staging/
+kube/.kind.kubeconfig
