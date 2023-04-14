@@ -1,0 +1,10 @@
+<Connector port="8443" protocol="org.apache.coyote.http11.Http11AprProtocol"
+               maxThreads="150" SSLEnabled="true" >
+        <UpgradeProtocol className="org.apache.coyote.http2.Http2Protocol" />
+        <SSLHostConfig>
+            <Certificate certificateKeyFile="conf/key.pem"
+                         certificateFile="conf/cert.pem"
+                         certificateChainFile="conf/chain.pem"
+                         type="RSA" />
+        </SSLHostConfig>
+    </Connector>

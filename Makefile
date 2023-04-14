@@ -1,6 +1,6 @@
 ####################################################### 
 # orbeon build:
-# requires gnu make
+# requires gnu make, podman
 # uses gmsl: https://sourceforge.net/projects/gmsl/
 # inspired by: https://tech.davis-hansson.com/p/make/
 ####################################################### 
@@ -17,62 +17,83 @@ ifeq ($(origin .RECIPEPREFIX), undefined)
 endif
 .RECIPEPREFIX = >
 ####################################################### 
+# environment parameters
+####################################################### 
+# token comes from environment
+GH_TOKEN=$(GITHUB_TOKEN)
+# push registry url comes from environment
+PUSH_URL := $(ORBEON_REGISTRY_PUSH_URL)
+####################################################### 
 
 .PHONY: build
 build: build/.build-container compile package
 #build-all: build/.build-container.almalinux build/.build-container.fedora build/.build-container.rocky build/.build-container.ubuntu
 
 build/.build-container.almalinux:
-> buildah build -f build/CONTAINERFILE.almalinux -t orbeon-build-almalinux
+> podman build -f build/CONTAINERFILE.almalinux -t orbeon-build-almalinux
 > @touch build/.build-container.almalinux
 
 build/.build-container.fedora:
-> buildah build -f build/CONTAINERFILE.fedora -t orbeon-build-fedora
+> podman build -f build/CONTAINERFILE.fedora -t orbeon-build-fedora
 > @touch build/.build-container.fedora
 
 build/.build-container.rocky:
-> buildah build -f build/CONTAINERFILE.rocky -t orbeon-build-rocky
+> podman build -f build/CONTAINERFILE.rocky -t orbeon-build-rocky
 > @touch build/.build-container.rocky
 
 build/.build-container.ubuntu:
-> buildah build -f build/CONTAINERFILE.ubuntu -t orbeon-build-ubuntu
+> podman build -f build/CONTAINERFILE.ubuntu -t orbeon-build-ubuntu
 > @touch build/.build-container.ubuntu
 
+# canonical build container
 build/.build-container: build/.build-container.ubuntu
-> buildah tag orbeon-build-ubuntu orbeon-build
+> podman tag orbeon-build-ubuntu orbeon-build
 
-# token comes from environment
-GH_TOKEN=$(GITHUB_TOKEN)
 .PHONY: compile
 compile:
 > podman run -it --rm --volume ./orbeon-forms:/orbeon:z -eGITHUB_TOKEN=$(GH_TOKEN) orbeon-build
 
 .PHONY: package
-package: orbeon.war
-> buildah build -f package/CONTAINERFILE.tomcat -t orbeon-tomcat
+package: staging package-deploy-container
 
-.PHONY staging
-staging: packaging/staging/orbeon
+.PHONY: package-deploy-container
+package-deploy-container:
+> podman build -f package/CONTAINERFILE.tomcat -t orbeon-tomcat
 
-packaging/staging/orbeon:
-> mv orbeon-forms/build/distrib/orbeon-20*-CE.zip staging/orbeon
+.PHONY: package-inspect
+package-inspect: package
+> podman run -it --rm --entrypoint /bin/bash orbeon-tomcat 
+
+.PHONY: start-tomcat
+start-tomcat: package
+> podman run -it --rm -p 8080:8080 orbeon-tomcat
+
+.PHONY: staging
+staging: package/staging/orbeon-exploded
+
+package/staging/orbeon-exploded: package/staging/orbeon
+> unzip package/staging/orbeon/orbeon.war -d package/staging/orbeon-exploded
+
+package/staging/orbeon:
+> unzip orbeon-forms/build/distrib/orbeon-2*-CE.zip -d package/staging
+> cd package/staging && ln -s orbeon-* orbeon
+
+.PHONY: staging-clean
+staging-clean:
+> @rm -rf package/staging/*;
 
 .PHONY: push-image
 push-image: package
-> podman push orbeon
+> podman push orbeon-tomcat $(PUSH_URL)
 
 .PHONY: clean
-clean: clean-images clean-war
+clean: clean-images
 > @rm -f build/.build-container.almalinux
 > @rm -f build/.build-container.fedora
 > @rm -f build/.build-container.rocky
 > @rm -f build/.build-container.ubuntu
 
-.PHONY: clean-war
-clean-war:
-> @rm -f orbeon.war
-
-.PHONY: clean-images
+.PHONY: images-clean
 clean-images:
 > @podman rmi -i localhost/orbeon-build-almalinux
 > @podman rmi -i localhost/orbeon-build-fedora
