@@ -156,7 +156,7 @@ build/.build-container-all: build/.build-container.almalinux build/.build-contai
 .PHONY: build-container-almalinux
 build-container-almalinux: build/.build-container.almalinux
 build/.build-container.almalinux:
-> podman build -f build/CONTAINERFILE.almalinux -t orbeon-build-almalinux
+> podman build -f build/CONTAINERFILE.almalinux -t build-container-almalinux
 > @touch build/.build-container.almalinux
 ####################################################### 
 # build almalinux jdk17 build-container
@@ -164,7 +164,7 @@ build/.build-container.almalinux:
 .PHONY: build-container-almalinux-jdk17
 build-container-almalinux-jdk17: build/.build-container.almalinux.jdk17
 build/.build-container.almalinux.jdk17:
-> podman build -f build/CONTAINERFILE.almalinux.jdk17 -t orbeon-build-almalinux-jdk17
+> podman build -f build/CONTAINERFILE.almalinux.jdk17 -t build-container-almalinux-jdk17
 > @touch build/.build-container.almalinux.jdk17
 ####################################################### 
 # build fedora build-container
@@ -172,7 +172,7 @@ build/.build-container.almalinux.jdk17:
 .PHONY: build-container.fedora
 build-container-fedora: build/.build-container.fedora
 build/.build-container.fedora:
-> podman build -f build/CONTAINERFILE.fedora -t orbeon-build-fedora
+> podman build -f build/CONTAINERFILE.fedora -t build-container.fedora
 > @touch build/.build-container.fedora
 ####################################################### 
 # build fedora jdk17 build-container
@@ -180,7 +180,7 @@ build/.build-container.fedora:
 .PHONY: build-container.fedora-jdk17
 build-container.fedora-jdk17: build/.build-container.fedora.jdk17
 build/.build-container.fedora.jdk17:
-> podman build -f build/CONTAINERFILE.fedora.jdk17 -t orbeon-build-fedora-jdk17
+> podman build -f build/CONTAINERFILE.fedora.jdk17 -t build-container.fedora-jdk17
 > @touch build/.build-container.fedora.jdk17
 ####################################################### 
 # build rocky build-container
@@ -188,7 +188,7 @@ build/.build-container.fedora.jdk17:
 .PHONY: build-container-rocky
 build-container-rocky: build/.build-container.rocky
 build/.build-container.rocky:
-> podman build -f build/CONTAINERFILE.rocky -t orbeon-build-rocky
+> podman build -f build/CONTAINERFILE.rocky -t build-container-rocky
 > @touch build/.build-container.rocky
 ####################################################### 
 # build rocky jdk17 build-container
@@ -196,7 +196,7 @@ build/.build-container.rocky:
 .PHONY: build-container.rocky.jdk17
 build-container-rocky-jdk17: build/.build-container.rocky.jdk17
 build/.build-container.rocky.jdk17:
-> podman build -f build/CONTAINERFILE.rocky.jdk17 -t orbeon-build-rocky-jdk17
+> podman build -f build/CONTAINERFILE.rocky.jdk17 -t build-container.rocky.jdk17
 > @touch build/.build-container.rocky.jdk17
 ####################################################### 
 # build ubuntu build-container
@@ -204,7 +204,7 @@ build/.build-container.rocky.jdk17:
 .PHONY: build-container-ubuntu
 build-container-ubuntu: build/.build-container.ubuntu
 build/.build-container.ubuntu:
-> podman build -f build/CONTAINERFILE.ubuntu -t orbeon-build-ubuntu
+> podman build -f build/CONTAINERFILE.ubuntu -t build-container-ubuntu
 > @touch build/.build-container.ubuntu
 ####################################################### 
 # build ubuntu jdk17 build-container
@@ -212,7 +212,7 @@ build/.build-container.ubuntu:
 .PHONY: build-container-ubuntu-jdk17
 build-container-ubuntu-jdk17: build/.build-container.ubuntu.jdk17
 build/.build-container.ubuntu.jdk17:
-> podman build -f build/CONTAINERFILE.ubuntu.jdk17 -t orbeon-build-ubuntu-jdk17
+> podman build -f build/CONTAINERFILE.ubuntu.jdk17 -t build-container-ubuntu-jdk17
 > @touch build/.build-container.ubuntu.jdk17
 ####################################################### 
 # tag build-container
@@ -220,8 +220,8 @@ build/.build-container.ubuntu.jdk17:
 #######################################################
 .PHONY: build-container
 build-container: build/.build-container
-build/.build-container: build-container-ubuntu
-> podman tag orbeon-build-ubuntu orbeon-build
+build/.build-container: build-container-almalinux-jdk17
+> podman tag build-container-almalinux-jdk17 build-container
 > @touch build/.build-container
 ####################################################### 
 # build-container-inspect
@@ -229,14 +229,14 @@ build/.build-container: build-container-ubuntu
 #######################################################
 .PHONY: build-container-inspect
 build-container-inspect: build-container package 
-> podman run -it --rm --entrypoint /bin/bash orbeon-build 
+> podman run -it --rm --entrypoint /bin/bash build-container 
 ####################################################### 
 # compile
 #######################################################
 .PHONY: compile
 compile: build-container package/staging/.compile.complete
 package/staging/.compile.complete:
-> podman run -it --rm --volume ./orbeon-forms:/orbeon:z -eGITHUB_TOKEN=$(GH_TOKEN) orbeon-build
+> podman run -it --rm --volume ./orbeon-forms:/orbeon:z -eGITHUB_TOKEN=$(GH_TOKEN) build-container
 > @touch package/staging/.compile.complete
 ####################################################### 
 # recompile
@@ -549,11 +549,15 @@ clean: clean-images staging-clean kind-clean
 #######################################################
 .PHONY: clean-images
 clean-images:
-> @podman rmi -i localhost/orbeon-build-almalinux
-> @podman rmi -i localhost/orbeon-build-fedora
-> @podman rmi -i localhost/orbeon-build-rocky
-> @podman rmi -i localhost/orbeon-build-ubuntu
-> @podman rmi -i localhost/orbeon-build
+> @podman rmi -i localhost/build-container-almalinux
+> @podman rmi -i localhost/build-container-fedora
+> @podman rmi -i localhost/build-container-rocky
+> @podman rmi -i localhost/build-container-ubuntu
+> @podman rmi -i localhost/build-container-almalinux-jdk17
+> @podman rmi -i localhost/build-container-fedora-jdk17
+> @podman rmi -i localhost/build-container-rocky-jdk17
+> @podman rmi -i localhost/build-container-ubuntu-jdk17
+> @podman rmi -i localhost/build-container
 ####################################################### 
 # git-clean everything
 #######################################################
