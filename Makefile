@@ -220,8 +220,8 @@ build/.build-container.ubuntu.jdk17:
 #######################################################
 .PHONY: build-container
 build-container: build/.build-container
-build/.build-container: build-container-almalinux-jdk17
-> podman tag build-container-almalinux-jdk17 build-container
+build/.build-container: build-container-ubuntu
+> podman tag build-container-ubuntu build-container
 > @touch build/.build-container
 ####################################################### 
 # build-container-inspect
@@ -244,7 +244,7 @@ package/staging/.compile.complete:
 .PHONY: recompile
 recompile: remove-compile-sentinel compile
 remove-compile-sentinel:
-> @rm package/staging/.compile.complete
+> @rm -f package/staging/.compile.complete
 ####################################################### 
 # package
 #   build the deployment orbean container

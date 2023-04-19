@@ -1,6 +1,8 @@
 FROM rockylinux:9
 
 RUN dnf install -y java-17-openjdk ant git npm gcc-c++ cairo-devel pango-devel libjpeg-turbo-devel giflib-devel
+# do this last so it is the default jdk
+RUN dnf install -y java-17-openjdk
 RUN cd /tmp && curl -fL https://github.com/coursier/coursier/releases/latest/download/cs-x86_64-pc-linux.gz | gzip -d > cs && chmod +x cs && ./cs setup --install-dir /usr/local/bin/
 RUN mkdir /orbeon
 COPY compile/build.sh /
