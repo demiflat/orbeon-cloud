@@ -1,3 +1,4 @@
+# https://stackoverflow.com/questions/56323438/session-affinity-settings-for-multiple-pods-exposed-by-a-single-service
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -12,6 +13,10 @@ spec:
       labels:
         app: my-app
     spec:
+      sessionAffinity: ClientIP
+      sessionAffinityConfig:
+        clientIP:
+          timeoutSeconds: 10000
       containers:
         - name: my-container
           image: my-image:latest
