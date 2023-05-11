@@ -344,9 +344,10 @@ kube/.kind.single.node.created:
 .PHONY: kind-cluster
 kind-cluster: kube/.kind.cluster.created
 kube/.kind.cluster.created:
-# > sudo KIND_EXPERIMENTAL_PROVIDER=podman systemd-run --scope --user --property=Delegate=yes $(KIND) create cluster --name orbeon-test-cluster --config kube/kind-cluster.yaml
-> sudo $(KIND) create cluster --name orbeon-test-cluster --config kube/kind-cluster.yaml -kubeconfig $(KUBECONFIG)
-> sudo chmod 666 $(KUBECONFIG)
+#> sudo KIND_EXPERIMENTAL_PROVIDER=podman systemd-run --scope --user --property=Delegate=yes $(KIND) create cluster --name orbeon-test-cluster --config kube/kind-cluster.yaml
+#> sudo $(KIND) create cluster --name orbeon-test-cluster --config kube/kind-cluster.yaml -kubeconfig $(KUBECONFIG)
+> $(KIND) create cluster --name orbeon-test-cluster --config kube/kind-cluster.yaml -kubeconfig $(KUBECONFIG)
+#> sudo chmod 666 $(KUBECONFIG)
 > @touch kube/.kind.cluster.created
 ####################################################### 
 # kind-kubeconfig
@@ -369,8 +370,10 @@ kube/.kind.kubeconfig:
 .PHONY: kind-cluster-kubeconfig
 kind-cluster-kubeconfig: kube/.kind.cluster.kubeconfig
 kube/.kind.cluster.kubeconfig: kube/.kind.cluster.created
-> sudo $(KIND) get kubeconfig --name orbeon-test-cluster > kube/.kind.cluster.kubeconfig
-> sudo $(KIND) get kubeconfig --name orbeon-test-cluster > kube/.kind.kubeconfig
+#> sudo $(KIND) get kubeconfig --name orbeon-test-cluster > kube/.kind.cluster.kubeconfig
+> $(KIND) get kubeconfig --name orbeon-test-cluster > kube/.kind.cluster.kubeconfig
+#> sudo $(KIND) get kubeconfig --name orbeon-test-cluster > kube/.kind.kubeconfig
+> $(KIND) get kubeconfig --name orbeon-test-cluster > kube/.kind.kubeconfig
 > $(info KUBECONFIG is $(KUBECONFIG))
 ####################################################### 
 # kind-load-cluster-image
@@ -511,7 +514,8 @@ kind-delete:
 #######################################################
 .PHONY: kind-cluster-delete
 kind-cluster-delete:
-> sudo $(KIND) delete cluster --name orbeon-test-cluster
+#> sudo $(KIND) delete cluster --name orbeon-test-cluster
+> $(KIND) delete cluster --name orbeon-test-cluster
 > @rm -f kube/.kind.cluster.created
 > @rm -f kube/.kind.load.image
 > @rm -f kube/.kind.deploy.cluster
